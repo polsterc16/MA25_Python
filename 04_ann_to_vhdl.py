@@ -13,7 +13,8 @@ import pickle
 # import json
 from tqdm import tqdm
 # import cv2
-# import tensorflow as tf
+import tensorflow as tf
+import keras
 #%%
 path_out_dir = os.path.join("OUTPUT", "04_ann_to_vhdl")
 # Check whether the specified path exists or not
@@ -27,15 +28,28 @@ if not isExist:
 
 file_name = "circle_model_weights.p"
 path_dir_03 = os.path.join("OUTPUT", "03_ann")
-fpath_input = os.path.join(path_dir_03, file_name)
- 
-if not os.path.exists(fpath_input):
-    raise Exception(f"Path does not exist: \n{fpath_input}")
-    pass
 
-weights = pickle.load( open( fpath_input, "rb" ) )
+fpath_input = os.path.join(path_dir_03, "circle_model.keras")
+
+model = keras.models.load_model(fpath_input)
 
 #%%
+
+conf = model.get_config()
+
+n = conf["name"]
+
+# must be a sequential ANN
+assert n[:10] == "sequential"
+
+for i,entry in enumerate(conf["layers"]):
+    print("--layer", i)
+    
+    
+
+#%%
+
+
 
 w1 = np.transpose(weights[0])
 b1 = weights[1]
