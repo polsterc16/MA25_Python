@@ -69,12 +69,12 @@ y_test  = Y[idx_train:]
 model = Sequential() 
 
 L1 = 8
-L2 = 8
+L2 = 2
 DO1 = 0.25
 DO2 = 0.25
 
 model.add(Dense( L1, activation = 'relu', input_shape = (2,) )) 
-model.add(Dropout(DO1))
+# model.add(Dropout(DO1))
 
 # model.add(Dense(L2, activation = 'relu')) 
 # model.add(Dropout(DO2)) 
@@ -89,7 +89,7 @@ model.compile(loss='MeanSquaredError', optimizer='adam', metrics=['accuracy'])
 # model.compile(loss='BinaryCrossentropy', optimizer='adam', metrics=['accuracy'])
 #%%
 print("-- model training")
-NUM_EPOCHS = 2
+NUM_EPOCHS = 5
 
 # model.fit(X_train, y_train, epochs=5, sample_weight=w_train)
 model.fit(X_train, y_train, epochs=NUM_EPOCHS,validation_data=(X_test,y_test))
