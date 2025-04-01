@@ -1,6 +1,6 @@
 -- VHDL Entity c_x_ANN_01
 --
--- Created: 2025-04-01 17:41:09.595061
+-- Created: 2025-04-01 17:47:37.940914
 --
 --
 LIBRARY ieee;
@@ -12,11 +12,11 @@ entity c_x_ANN_01 is
       clk          : in     std_logic;
       reset        : in     std_logic;
       
-      src_TX0      : in     std_logic;
-      ack_RX0      : out    std_logic;
+      src_TX      : in     std_logic;
+      ack_RX      : out    std_logic;
       
-      dst_RX2      : in     std_logic;
-      ready_to_TX2 : out    std_logic;
+      dst_RX      : in     std_logic;
+      ready_to_TX : out    std_logic;
       
       -- layer_in    : in     t_array_data_stdlv (0 to 1);
       -- layer_out   : out    t_array_data_stdlv (0 to 1)
@@ -31,7 +31,7 @@ end c_x_ANN_01 ;
 --
 -- VHDL Architecture c_x_ANN_01.struct
 --
--- Created: 2025-04-01 17:41:09.595061
+-- Created: 2025-04-01 17:47:37.940914
 --
 --
 LIBRARY ieee;
