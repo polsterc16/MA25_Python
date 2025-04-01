@@ -6,6 +6,7 @@ Created on Tue Mar 25 17:24:52 2025
 """
 #%% IMPORTS
 import os
+import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,19 +34,86 @@ fpath_input = os.path.join(path_dir_03, "circle_model.keras")
 
 model = keras.models.load_model(fpath_input)
 
+weights = model.get_weights()
+
 #%%
 
-conf = model.get_config()
+ann_conf = model.get_config()
 
-n = conf["name"]
-
+n = ann_conf["name"]
 # must be a sequential ANN
 assert n[:10] == "sequential"
 
-for i,entry in enumerate(conf["layers"]):
-    print("--layer", i)
+ann_layers = ann_conf["layers"]
+
+
+layers = {"num_layers":0}
+units_prev = 0
+layer_idx = 0
+
+for i,entry in enumerate(ann_layers):
+    print("-- Layer", i, entry["class_name"])
+    
+    if entry["class_name"] == "InputLayer":
+        layer_conf = entry["config"]
+        layers["input_size"] = layer_conf["batch_input_shape"][1]
+        units_prev = layer_conf["batch_input_shape"][1]
+        
+    elif entry["class_name"] == "Dense":
+        layer_conf = entry["config"]
+        layers[layer_idx] = {"units": layer_conf["units"],
+                     "units_prev": units_prev,
+                     "activation": layer_conf["activation"]}
+        layers["num_layers"] += 1
+        units_prev = layer_conf["units"]
+        layer_idx += 1
+        
+        pass
+    else:
+        raise Exception("Unknown Type of Layer")
+        pass
+    
+    pass
+
+#%%
+
+DATA_WIDTH = 16
+DATA_Q = 8
+FP_ONE = 2**DATA_Q
+
+inst_port_maps = [""]*layers["num_layers"]
+
+
+for i in range(layers["num_layers"]):
+    j = 2*i
+    
+    w = weights[j] * FP_ONE
+    w = np.int64(w)
+    w = np.transpose(w)
+    
+    b = weights[j+1] * FP_ONE
+    b = np.int64(b)
+    
+    layer = layers[i]
+    
+    inst_port_maps[i]=(
+        f"U_{i} : c_004_layer_01" + "\n"+
+        "generic map (" + "\n"+
+        f"g_layer_length_cur => {layer['units']}," + "\n"+
+        f"g_layer_length_prev => {layer['units_prev']}," + "\n" )
+    
+    if len(b) == 1:
+        txt_bias = f"g_layer_bias => ( 0 => {b[0]} )," + "\n"
+    else:
+        
+        pass
     
     
+    
+
+
+
+
 
 #%%
 
