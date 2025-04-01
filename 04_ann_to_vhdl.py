@@ -75,6 +75,8 @@ for i,entry in enumerate(ann_layers):
     
     pass
 
+del units_prev, layer_idx, n
+
 #%%
 
 DATA_WIDTH = 16
@@ -85,28 +87,84 @@ inst_port_maps = [""]*layers["num_layers"]
 
 
 for i in range(layers["num_layers"]):
-    j = 2*i
+
+    layer = layers[i]
     
-    w = weights[j] * FP_ONE
+    w = weights[2*i] * FP_ONE
     w = np.int64(w)
     w = np.transpose(w)
     
-    b = weights[j+1] * FP_ONE
+    b = weights[2*i + 1] * FP_ONE
     b = np.int64(b)
     
-    layer = layers[i]
     
-    inst_port_maps[i]=(
-        f"U_{i} : c_004_layer_01" + "\n"+
-        "generic map (" + "\n"+
-        f"g_layer_length_cur => {layer['units']}," + "\n"+
-        f"g_layer_length_prev => {layer['units_prev']}," + "\n" )
+    txt_component_begin =  f"U_{i} : c_004_layer_01"
     
+    
+    
+    
+    txt_generic = "generic map (\n{}\n)\n"
+    
+    list_generics = []
+    
+    list_generics.append(f"g_layer_length_cur => {layer['units']}")
+    #-------
+    list_generics.append(f"g_layer_length_prev => {layer['units_prev']}")
+    #-------
+    
+    # Bias: is 1D array.
+    # We take care to correctly format, if the array only contains 1 element
+    txt_b1 = "( {} )"
     if len(b) == 1:
-        txt_bias = f"g_layer_bias => ( 0 => {b[0]} )," + "\n"
-    else:
-        
+        txt_b1 = "( 0 => {} )"
+    
+    b1 = [str(x) for x in b]
+    b1 = txt_b1.format(", ".join(b1))
+    txt_bias = f"g_layer_bias => {b1}"
+    list_generics.append(txt_bias)
+    #-------
+    
+    # Weights: is a 2d array, where the first index is the current unit
+    # and the second index is the previous unit.
+    # We take care to correctly format, if an array only contains 1 element
+    
+    txt_w1 = "( {} )"
+    if len(w) == 1:
+        txt_w1 = "( 0 => {} )"
         pass
+    
+    list_w2 = []
+    for elem in w:
+        txt_w2 = "({})"
+        if len(elem) == 1:
+            txt_w2 = "( 0 => {} )"
+            pass
+        
+        w2 = [str(x) for x in elem]
+        w2 = txt_w2.format(", ".join(w2))
+        list_w2.append(w2)
+        pass
+    w1 = txt_w1.format(", ".join(list_w2))
+    
+    txt_weights = f"g_layer_weights => {w1}"
+    list_generics.append(txt_weights)
+    #-------
+    
+    
+    list_generics.append(f"g_act_func => AF_{layer['activation'].upper()}")
+    #-------
+    
+    
+    
+    txt_generic = txt_generic.format(",\n".join(list_generics))
+    del list_generics, txt_weights, list_w2, txt_w1, txt_w2, w, w1, w2
+    del txt_bias, txt_b1, b1, b
+    
+    print("\n--",i)
+    print(txt_generic)
+    
+    
+    # print(inst_port_maps[i])
     
     
     
