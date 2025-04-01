@@ -79,11 +79,16 @@ del units_prev, layer_idx, n
 
 #%%
 
+
+#%%
+
 DATA_WIDTH = 16
 DATA_Q = 8
 FP_ONE = 2**DATA_Q
 
 inst_port_maps = [""]*layers["num_layers"]
+
+list_signals = []
 
 
 for i in range(layers["num_layers"]):
@@ -98,12 +103,18 @@ for i in range(layers["num_layers"]):
     b = np.int64(b)
     
     
-    txt_component_begin =  f"U_{i} : c_004_layer_01"
-    
-    
+    txt_component =  f"U_{i} : c_004_layer_01" + "\n{};\n"
     
     
     txt_generic = "generic map (\n{}\n)\n"
+    txt_port = "port map (\n{}\n)\n"
+    
+    
+    
+    
+    #-------
+    #------- GENERIC MAP
+    #-------    
     
     list_generics = []
     
@@ -160,11 +171,105 @@ for i in range(layers["num_layers"]):
     del list_generics, txt_weights, list_w2, txt_w1, txt_w2, w, w1, w2
     del txt_bias, txt_b1, b1, b
     
-    print("\n--",i)
-    print(txt_generic)
+    # print("\n--",i)
+    # print(txt_generic)
     
     
-    # print(inst_port_maps[i])
+    
+    
+    
+    
+    #-------
+    #------- PORT MAP
+    #------- 
+    
+    # https://asciiflow.com/
+    #     ┌───────────────────────┐    
+    #     │                       │    
+    # ───>│ CLK                   │    
+    #     │                       │    
+    # ───>│ RESET                 │    
+    #     │                       │    
+    #     │                       │    
+    # <───│ ACK_RX         DST_RX │<───
+    #     │                       │    
+    # ───>│ SRC_TX           R2TX │───>
+    #     │                       │    
+    #     │                       │    
+    # ───>│ Layer_in    Layer_out │───>
+    #     │                       │    
+    #     └───────────────────────┘    
+    
+    
+    if i == 0:
+        signal_ACK_RX    = "ack_RX"
+        signal_SRC_TX    = "src_TX"
+        signal_Layer_in  = "layer_in"
+        
+        signal_DST_RX    = f"DST_RX_{i}"
+        signal_R2TX      = f"R2TX_{i}"
+        signal_Layer_out = f"layer_{i}"
+        
+        signal_decl_DST_RX = f"signal {signal_DST_RX} : std_logic;"
+        signal_decl_R2TX   = f"signal {signal_R2TX} : std_logic;"
+        signal_decl_Layer  = f"signal {signal_Layer_out} : t_array_data_stdlv(0 to {layer['units'] - 1});"
+        list_signals.append(signal_decl_DST_RX)
+        list_signals.append(signal_decl_R2TX)
+        list_signals.append(signal_decl_Layer)
+        pass
+    
+    elif i == (layers["num_layers"]-1):
+        signal_ACK_RX    = f"DST_RX_{i-1}"
+        signal_SRC_TX    = f"R2TX_{i-1}"
+        signal_Layer_in  = f"layer_{i-1}"
+        
+        signal_DST_RX    = "dst_RX"
+        signal_R2TX      = "ready_to_TX"
+        signal_Layer_out = "layer_out"
+        pass
+    
+    else:
+        signal_ACK_RX    = f"DST_RX_{i-1}"
+        signal_SRC_TX    = f"R2TX_{i-1}"
+        signal_Layer_in  = f"layer_{i-1}"
+        
+        signal_DST_RX    = f"DST_RX_{i}"
+        signal_R2TX      = f"R2TX_{i}"
+        signal_Layer_out = f"layer_{i}"
+        
+        signal_decl_DST_RX = f"signal {signal_DST_RX} : std_logic;"
+        signal_decl_R2TX   = f"signal {signal_R2TX} : std_logic;"
+        signal_decl_Layer  = f"signal {signal_Layer_out} : t_array_data_stdlv(0 to {layer['units'] - 1});"
+        list_signals.append(signal_decl_DST_RX)
+        list_signals.append(signal_decl_R2TX)
+        list_signals.append(signal_decl_Layer)
+        pass
+    
+    
+    
+        
+    list_ports = []
+    
+    list_ports.append(f"clk => clk")
+    list_ports.append(f"reset => reset")
+    #-------
+    list_ports.append(f"ack_RX => {signal_ACK_RX}")
+    list_ports.append(f"src_TX => {signal_SRC_TX}")
+    list_ports.append(f"layer_in => {signal_Layer_in}")
+    #-------
+    list_ports.append(f"dst_RX => {signal_DST_RX}")
+    list_ports.append(f"ready_to_TX => {signal_R2TX}")
+    list_ports.append(f"layer_out => {signal_Layer_out}")
+    
+    # print(list_ports)
+    txt_port = txt_port.format(",\n".join(list_ports))
+    
+    print(txt_port)
+    
+    #-------
+    #------- PORT MAP
+    #------- 
+    
     
     
     
