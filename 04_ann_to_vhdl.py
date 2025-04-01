@@ -25,6 +25,7 @@ if not isExist:
     os.makedirs(path_out_dir)
     print("The new directory is created!"+"\n"+f"{path_out_dir}")
 
+del isExist
 #%% Get Data
 
 file_name = "circle_model_weights.p"
@@ -75,7 +76,7 @@ for i,entry in enumerate(ann_layers):
     
     pass
 
-del units_prev, layer_idx, n
+del units_prev, layer_idx, n, entry
 
 #%%
 
@@ -89,6 +90,8 @@ FP_ONE = 2**DATA_Q
 inst_port_maps = [""]*layers["num_layers"]
 
 list_signals = []
+
+list_port_inout = []
 
 
 for i in range(layers["num_layers"]):
@@ -106,8 +109,8 @@ for i in range(layers["num_layers"]):
     txt_component =  f"U_{i} : c_004_layer_01" + "\n{};\n"
     
     
-    txt_generic = "generic map (\n{}\n)\n"
-    txt_port = "port map (\n{}\n)\n"
+    txt_generic = "generic map (\n{}\n)"
+    txt_port = "port map (\n{}\n)"
     
     
     
@@ -118,9 +121,9 @@ for i in range(layers["num_layers"]):
     
     list_generics = []
     
-    list_generics.append(f"g_layer_length_cur => {layer['units']}")
+    list_generics.append("  "+f"g_layer_length_cur => {layer['units']}")
     #-------
-    list_generics.append(f"g_layer_length_prev => {layer['units_prev']}")
+    list_generics.append("  "+f"g_layer_length_prev => {layer['units_prev']}")
     #-------
     
     # Bias: is 1D array.
@@ -131,7 +134,7 @@ for i in range(layers["num_layers"]):
     
     b1 = [str(x) for x in b]
     b1 = txt_b1.format(", ".join(b1))
-    txt_bias = f"g_layer_bias => {b1}"
+    txt_bias = "  "+f"g_layer_bias => {b1}"
     list_generics.append(txt_bias)
     #-------
     
@@ -157,19 +160,19 @@ for i in range(layers["num_layers"]):
         pass
     w1 = txt_w1.format(", ".join(list_w2))
     
-    txt_weights = f"g_layer_weights => {w1}"
+    txt_weights = "  "+f"g_layer_weights => {w1}"
     list_generics.append(txt_weights)
     #-------
     
     
-    list_generics.append(f"g_act_func => AF_{layer['activation'].upper()}")
+    list_generics.append("  "+f"g_act_func => AF_{layer['activation'].upper()}")
     #-------
     
     
     
     txt_generic = txt_generic.format(",\n".join(list_generics))
     del list_generics, txt_weights, list_w2, txt_w1, txt_w2, w, w1, w2
-    del txt_bias, txt_b1, b1, b
+    del txt_bias, txt_b1, b1, b, elem
     
     # print("\n--",i)
     # print(txt_generic)
@@ -200,7 +203,9 @@ for i in range(layers["num_layers"]):
     #     │                       │    
     #     └───────────────────────┘    
     
-    
+    signal_decl_DST_RX = ""
+    signal_decl_R2TX = ""
+    signal_decl_Layer = ""
     if i == 0:
         signal_ACK_RX    = "ack_RX"
         signal_SRC_TX    = "src_TX"
@@ -216,6 +221,8 @@ for i in range(layers["num_layers"]):
         list_signals.append(signal_decl_DST_RX)
         list_signals.append(signal_decl_R2TX)
         list_signals.append(signal_decl_Layer)
+        
+        list_port_inout.append(f"layer_in : in t_array_data_stdlv (0 to {layer['units_prev'] - 1})")
         pass
     
     elif i == (layers["num_layers"]-1):
@@ -226,6 +233,8 @@ for i in range(layers["num_layers"]):
         signal_DST_RX    = "dst_RX"
         signal_R2TX      = "ready_to_TX"
         signal_Layer_out = "layer_out"
+        
+        list_port_inout.append(f"layer_out : out t_array_data_stdlv (0 to {layer['units'] - 1})")
         pass
     
     else:
@@ -250,31 +259,58 @@ for i in range(layers["num_layers"]):
         
     list_ports = []
     
-    list_ports.append(f"clk => clk")
-    list_ports.append(f"reset => reset")
+    list_ports.append("  "+f"clk => clk")
+    list_ports.append("  "+f"reset => reset")
     #-------
-    list_ports.append(f"ack_RX => {signal_ACK_RX}")
-    list_ports.append(f"src_TX => {signal_SRC_TX}")
-    list_ports.append(f"layer_in => {signal_Layer_in}")
+    list_ports.append("  "+f"ack_RX => {signal_ACK_RX}")
+    list_ports.append("  "+f"src_TX => {signal_SRC_TX}")
+    list_ports.append("  "+f"layer_in => {signal_Layer_in}")
     #-------
-    list_ports.append(f"dst_RX => {signal_DST_RX}")
-    list_ports.append(f"ready_to_TX => {signal_R2TX}")
-    list_ports.append(f"layer_out => {signal_Layer_out}")
+    list_ports.append("  "+f"dst_RX => {signal_DST_RX}")
+    list_ports.append("  "+f"ready_to_TX => {signal_R2TX}")
+    list_ports.append("  "+f"layer_out => {signal_Layer_out}")
     
     # print(list_ports)
     txt_port = txt_port.format(",\n".join(list_ports))
     
-    print(txt_port)
+    # print(txt_port)
+    del signal_ACK_RX, signal_SRC_TX, signal_Layer_in
+    del signal_DST_RX, signal_R2TX, signal_Layer_out
+    del signal_decl_DST_RX, signal_decl_R2TX, signal_decl_Layer
+    del list_ports
+    
+    
+    
     
     #-------
-    #------- PORT MAP
+    #------- Complete Component
     #------- 
     
+    txt_component =  txt_component.format("\n".join([txt_generic, txt_port]))
+    # print(txt_component)
+    inst_port_maps[i] = txt_component
     
+    del txt_component, txt_generic, txt_port
     
+    pass
     
+#-------
+#------- Signals
+#------- 
+txt_signals = "\n".join(list_signals)
+del list_signals
 
 
+#-------
+#------- Port Layer in out
+#------- 
+txt_port_layer_inout = ";\n".join(list_port_inout)
+del list_port_inout
+
+
+
+inst_port_maps = "\n".join(inst_port_maps)
+print(inst_port_maps)
 
 
 
@@ -282,46 +318,55 @@ for i in range(layers["num_layers"]):
 
 
 
-w1 = np.transpose(weights[0])
-b1 = weights[1]
-w2 = np.transpose(weights[2])
-b2 = weights[3]
-
-w1FP = np.zeros(w1.shape,np.int32)
-for i in range(w1.shape[0]):
-    for j in range(w1.shape[1]):
-        w1FP[i,j] = int(w1[i,j] * 2**8)
-        pass
-    pass
-
-b1FP = [int(k*2**8) for k in b1]
-
-w2FP = np.zeros(w2.shape,np.int32)
-for i in range(w2.shape[0]):
-    for j in range(w2.shape[1]):
-        w2FP[i,j] = int(w2[i,j] * 2**8)
-        pass
-    pass
-
-b2FP = [int(k*2**8) for k in b2]
-
 
 
 #%%
 
-path_in_dir = os.path.join("INTPUT", "04_ann_to_vhdl")
+path_in_dir = os.path.join("INPUT", "04_ann_to_vhdl")
  
 if not os.path.exists(path_in_dir):
     raise Exception(f"Path does not exist: \n{path_in_dir}")
     pass
 
-file_name = "Entity.vhd"
-fpath = os.path.join(path_dir_03, file_name)
-
+file_name = "Combined v2.vhd"
+fPathIn = os.path.join(path_in_dir, file_name)
+# D:\DCD_workspace\python\MA25_Python\INPUT\04_ann_to_vhdl\Combined v2.vhd
 
 #%%
 
+with open(fPathIn) as f:
+    fileStr = f.read()
+    pass
 
+EntityName = "c_x_ANN_01"
+fileNameOut = f"{EntityName}.vhd"
+fPathOut = os.path.join(path_out_dir, fileNameOut)
+
+fileStr = fileStr.replace("{$NAME_ENTITY}", EntityName)
+
+
+tnow = datetime.datetime.now()
+fileStr = fileStr.replace("{$DATE_TIME}", str(tnow))
+
+
+
+fileStr = fileStr.replace("{$SIGNAL_DECLARATION}", txt_signals)
+
+
+
+fileStr = fileStr.replace("{$INSTANCE_PORT_MAPPINGS}", inst_port_maps)
+
+
+
+
+
+fileStr = fileStr.replace("{$PORT_LAYER_IN_OUT}", txt_port_layer_inout)
+
+
+
+
+with open(fPathOut, mode="w") as f:
+    f.write(fileStr)
 
 #%%
 
