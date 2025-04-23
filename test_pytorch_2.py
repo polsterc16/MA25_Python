@@ -35,6 +35,11 @@ class NN(nn.Module): # inherit from nn.Module
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
 
 #%% Hyperparameters
+input_size = 28*28
+num_classes = 10
+learning_rate = 0.001
+batch_size = 64
+num_epochs = 1
 
 #%% Load Data
 
