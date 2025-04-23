@@ -30,11 +30,9 @@ class NN(nn.Module): # inherit from nn.Module
         x = F.relu(self.fc2(x))
         return x
 
-model = NN(28*28,10)
-x = torch.rand(64, 28*28) #64 examples
-print(model(x).shape)
 
 #%% Set Device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
 
 #%% Hyperparameters
 
