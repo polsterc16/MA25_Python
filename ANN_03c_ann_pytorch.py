@@ -162,7 +162,7 @@ state_dict = model.state_dict()
 
 # ALTERNATIVE: https://pytorch.org/tutorials/beginner/saving_loading_models.html
 model_scripted = torch.jit.script(model) # Export to TorchScript
-model_scripted.save('03c_ann_pytorch_model.tar') # Save
+model_scripted.save('03c_ann_pytorch_model.pt') # Save
 
 # example_inputs = (torch.randn(2),)
 # onnx_program = torch.onnx.export(model,example_inputs, '03c_ann_pytorch_model.onnx')
