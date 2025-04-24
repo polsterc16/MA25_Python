@@ -18,6 +18,12 @@ import torch.utils.data as data
 
 from tqdm import tqdm
 
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set()
+
 #%% Network
 # https://pytorch.org/docs/main/nn.html#loss-functions
 # https://pytorch.org/docs/main/nn.html#non-linear-activations-weighted-sum-nonlinearity
@@ -49,7 +55,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
 
 #%% Hyperparameters
 num_inputs = 2
-num_hidden = 4
+num_hidden = 8
 num_outputs = 1
 
 batch_size = 64
@@ -74,7 +80,7 @@ class CircleDataset(data.Dataset):
     
     def generate_dataset(self):
         self.data = torch.zeros((self.size,2), dtype=torch.float32)
-        self.labels = torch.zeros((self.size), dtype=torch.float32)
+        self.label = torch.zeros((self.size), dtype=torch.float32)
         
         args = torch.rand((self.size,2), dtype=torch.float32)
         args[:,0] *= 2            # rand radius 0 to 2
@@ -83,7 +89,7 @@ class CircleDataset(data.Dataset):
         self.data[:,0] = args[:,0] * torch.cos( args[:,1] ) # x pos
         self.data[:,1] = args[:,0] * torch.sin( args[:,1] ) # y pos
         
-        self.labels = (args[:,0]<1).long()
+        self.label = (args[:,0]<1).long()
         
     def __len__(self):
         # Number of data point we have. Alternatively self.data.shape[0], or self.label.shape[0]
@@ -91,7 +97,7 @@ class CircleDataset(data.Dataset):
     def __getitem__(self, idx):
         # Return the idx-th data point of the dataset
         # If we have multiple things to return (data point and label), we can return them as tuple
-        return self.data[idx], self.labels[idx]
+        return self.data[idx], self.label[idx]
 
 
 #%% Get Training Dataset
@@ -100,8 +106,8 @@ train_dataset = CircleDataset(size=1e6)
 train_data_loader = data.DataLoader(train_dataset, batch_size=128, shuffle=True)
 
 #%% Loss and Optimizer
-loss_module = nn.BCEWithLogitsLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+loss_module = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters())
 
 #%% Train Network
 def train_model(model, optimizer, data_loader, loss_module, num_epochs=100):
@@ -137,13 +143,12 @@ train_model(model, optimizer, train_data_loader, loss_module, num_epochs=num_epo
 state_dict = model.state_dict()
 
 # torch.save(object, filename). For the filename, any extension can be used
-torch.save(state_dict, "OUTPUT/test_pytorch_4.tar")
+torch.save(state_dict, "OUTPUT/03c_ann_pytorch.tar")
 
 #%% Load Model
-state_dict = model.state_dict()
 
 # Load state dict from the disk 
-state_dict  = torch.load("OUTPUT/test_pytorch_4.tar")
+state_dict  = torch.load("OUTPUT/03c_ann_pytorch.tar")
 
 # Create a new model and load the state
 model = NN(num_inputs=num_inputs, num_hidden=num_hidden, num_outputs=num_outputs)
@@ -177,13 +182,119 @@ def eval_model(model, data_loader):
             num_preds += data_labels.shape[0]
 
     acc = true_preds / num_preds
-    print(f"Accuracy of the model: {100.0*acc:4.2f}%")
+    print(f"\nAccuracy of the model: {100.0*acc:4.2f}%")
 
 
 
 #%%
 
 eval_model(model, test_data_loader)
+
+#%% Show region
+
+@torch.no_grad()
+def visualize_classification(model, data, label):
+    model.eval() # Set model to eval mode
+    
+    if isinstance(data, torch.Tensor):
+        data = data.cpu().numpy()
+    if isinstance(label, torch.Tensor):
+        label = label.cpu().numpy()
+    data_0 = data[label == 0]
+    data_1 = data[label == 1]
+    
+    fig = plt.figure(figsize=(4,4))
+    plt.scatter(data_0[:,0], data_0[:,1], marker="^", label="Outside")
+    plt.scatter(data_1[:,0], data_1[:,1], marker="o", label="Inside")
+    plt.title("Unit Circle Evaluation")
+    plt.ylabel(r"$y$")
+    plt.xlabel(r"$x$")
+    plt.legend()
+    plt.axis("equal")
+    plt.tight_layout()
+    
+    return fig
+
+@torch.no_grad()
+def visualize_classification_2(model, data, label):
+    model.eval() # Set model to eval mode
+    
+    if isinstance(data, torch.Tensor):
+        data = data.cpu().numpy()
+    if isinstance(label, torch.Tensor):
+        label = label.cpu().numpy()
+    data_0 = data[label == 0]
+    data_1 = data[label == 1]
+    
+    # fig = plt.figure(figsize=(4,4))
+    fig, ax = plt.subplots(figsize=(4,4))
+    ax.scatter(
+        data_0[:,0], data_0[:,1], marker="^", linewidths=0.5, facecolors='none', edgecolors="k", label="Outside")
+    ax.scatter(
+        data_1[:,0], data_1[:,1], marker="o", linewidths=0.5, facecolors='none', edgecolors="k", label="Inside")
+    
+    ax.set_title("Unit Circle Evaluation")
+    ax.set_ylabel(r"$y$")
+    ax.set_xlabel(r"$x$")
+    # plt.title("Dataset samples")
+    # plt.ylabel(r"$y$")
+    # plt.xlabel(r"$x$")
+    
+    
+    
+    ax.legend()
+    ax.axis("equal")
+    ax.grid(True)
+    
+    
+    ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(base=1))
+    ax.yaxis.set_major_locator(mpl.ticker.MultipleLocator(base=1))
+    
+    
+    model.to(device)
+    
+    c0 = torch.Tensor(mpl.colors.to_rgba("C0")).to(device)
+    c1 = torch.Tensor(mpl.colors.to_rgba("C1")).to(device)
+    
+    x1 = torch.arange(-2, 2, step=0.01, device=device)
+    x2 = torch.arange(-2, 2, step=0.01, device=device)
+    xx1, xx2 = torch.meshgrid(x1, x2, indexing='ij')  # Meshgrid function as in numpy
+    model_inputs = torch.stack([xx1, xx2], dim=-1)
+    preds = model(model_inputs)
+    
+    output_image = (1 - preds) * c0[None,None] + preds * c1[None,None]
+    output_image = output_image.cpu().numpy()
+    
+    
+    
+    ax.imshow(output_image, origin='lower', extent=(-2, 2, -2, 2))
+    
+    
+    ax.set_xlim([-2, 2])
+    ax.set_ylim([-2, 2])
+    # plt.xlim([-2, 2])
+    # plt.ylim([-2, 2])
+    
+    # fig.tight_layout()
+    return fig,ax
+
+
+#%%
+# visual_dataset = CircleDataset(size=1e3)
+
+
+# plt.close("all")
+# _ = visualize_classification(model, visual_dataset.data, visual_dataset.label)
+# plt.show()
+
+
+
+visual_dataset = CircleDataset(size=1e2)
+
+
+plt.close("all")
+fig,ax = visualize_classification_2(model, visual_dataset.data, visual_dataset.label)
+plt.show()
 
 #%%
 # raise Exception("end")
