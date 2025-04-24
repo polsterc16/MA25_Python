@@ -48,6 +48,8 @@ class NN(nn.Module): # inherit from nn.Module
         return x
 
 
+# save class
+torch.save(NN, "OUTPUT/03c_ann_pytorch_class.tar")
 
 #%% Set Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
