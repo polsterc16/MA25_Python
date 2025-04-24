@@ -83,7 +83,7 @@ dict_map_activation = {
 }
 
 
-layers_1 = {"num_layers":0}
+layers = {"num_layers":0}
 
 for i,entry in enumerate(ann_layers):
     n = entry.original_name
@@ -93,23 +93,23 @@ for i,entry in enumerate(ann_layers):
         # if is DENSE / Fully Connected Layer
         if n == "Linear":
             # layer_conf = entry["config"]
-            layers_1[layers_1["num_layers"]] = {
+            layers[layers["num_layers"]] = {
                 "activation": "IDENTITY",
                 "pytorchIdx": i,
             }
-            # dict_map_pytorch_layer[layers_1["num_layers"]] = i
+            # dict_map_pytorch_layer[layers["num_layers"]] = i
             
-            layers_1["num_layers"] += 1
+            layers["num_layers"] += 1
             pass
         # else: if is conv layer, todo:future
     elif n in dict_map_activation:
         # if is Activation function (of prev layer)
         
         if n == "ReLU":
-            layers_1[layers_1["num_layers"]-1]["activation"] = dict_map_activation[n]
+            layers[layers["num_layers"]-1]["activation"] = dict_map_activation[n]
             
         elif n == "Hardsigmoid":
-            layers_1[layers_1["num_layers"]-1]["activation"] = dict_map_activation[n]
+            layers[layers["num_layers"]-1]["activation"] = dict_map_activation[n]
         
     else:
         raise Exception("Unknown Type of Layer")
@@ -117,9 +117,7 @@ for i,entry in enumerate(ann_layers):
     
     pass
 
-
-#%%
-layers_2 = dict(layers_1)
+###############################################################################
 
 state_dict = model.state_dict()
 postfix_weight = ".{}.weight"
@@ -130,16 +128,20 @@ list_keys = [k for k in state_dict]
 # so we fetch the first element and split with "." as separator
 prefix = list_keys[0].split(".")[0]
 
-for idx in range(layers_2["num_layers"]):
-    entry = layers_2[idx]
+for idx in range(layers["num_layers"]):
+    entry = layers[idx]
     print(idx,entry)
     
     # the dict keys are a composite of prefix and postfix (formated with pytorchIdx)
-    key_weights = prefix + postfix_weight.format(entry["pytorchIdx"])
-    key_biases  = prefix + postfix_bias.format(entry["pytorchIdx"])
+    pytorchIdx = entry["pytorchIdx"]
+    key_weights = prefix + postfix_weight.format(pytorchIdx)
+    key_biases  = prefix + postfix_bias.format(pytorchIdx)
     
-    entry["weights"]
+    entry["weights"] = state_dict[key_weights].numpy()
+    entry["biases"] = state_dict[key_biases].numpy()
     # entry["units"]
+    
+    entry["units"], entry["units_prev"] = entry["weights"].shape
     
     
     
@@ -170,9 +172,11 @@ for i in range(layers["num_layers"]):
 
     layer = layers[i]
     
-    w = weights[2*i] * FP_ONE
+    weights = layer["weights"]
+    w = weights * FP_ONE
     w = np.int64(w)
-    w = np.transpose(w)
+    # raise Exception()
+    # w = np.transpose(w)
     
     b = weights[2*i + 1] * FP_ONE
     b = np.int64(b)
