@@ -28,23 +28,31 @@ sns.set()
 # https://pytorch.org/docs/main/nn.html#loss-functions
 # https://pytorch.org/docs/main/nn.html#non-linear-activations-weighted-sum-nonlinearity
 
+# https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
+
 class NN(nn.Module): # inherit from nn.Module
 
     def __init__(self, num_inputs, num_hidden, num_outputs):
         super(NN, self).__init__()
         # Initialize the modules we need to build the network
-        self.linear1 = nn.Linear(num_inputs, num_hidden)
-        self.linear2 = nn.Linear(num_hidden, num_outputs)
-        self.act_relu = F.relu
-        self.act_hsigm = F.hardsigmoid
+        # self.linear1 = nn.Linear(num_inputs, num_hidden)
+        # self.linear2 = nn.Linear(num_hidden, num_outputs)
+        # # self.act_relu = F.relu
+        # self.act_relu = nn.ReLU()
+        # # self.act_hsigm = F.hardsigmoid
+        # self.act_hsigm = nn.Hardsigmoid()
+        
+        self.linear_stack = nn.Sequential(
+            nn.Linear(num_inputs, num_hidden),
+            nn.ReLU(),
+            nn.Linear(num_hidden, num_outputs),
+            nn.Hardsigmoid(),
+        )
         pass
     
     def forward(self, x):
         # Perform the calculation of the model to determine the prediction
-        x = self.linear1(x)
-        x = self.act_relu(x)
-        x = self.linear2(x)
-        x = self.act_hsigm(x)
+        x = self.linear_stack(x)
         return x
 
 
@@ -53,6 +61,7 @@ torch.save(NN, "OUTPUT/03c_ann_pytorch_class.tar")
 
 #%% Set Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu" )
+
 
 
 #%% Hyperparameters
@@ -119,8 +128,8 @@ def train_model(model, optimizer, data_loader, loss_module, num_epochs=100):
     # Training loop
     # for epoch in tqdm(range(num_epochs)):
     for epoch in (range(num_epochs)):
-        print(f"Epoch {epoch+1} / {num_epochs}")
-        for data_inputs, data_labels in tqdm(data_loader):
+        # print(f"Epoch {epoch+1} / {num_epochs}")
+        for data_inputs, data_labels in tqdm(data_loader, desc=f"Epoch {epoch+1:02d}/{num_epochs:02d}"):
             # Step 1: Move input data to device
             data_inputs = data_inputs.to(device)
             data_labels = data_labels.to(device)
@@ -144,20 +153,31 @@ train_model(model, optimizer, train_data_loader, loss_module, num_epochs=num_epo
 #%% Save Model
 state_dict = model.state_dict()
 
-# torch.save(object, filename). For the filename, any extension can be used
-torch.save(state_dict, "OUTPUT/03c_ann_pytorch.tar")
+# # torch.save(object, filename). For the filename, any extension can be used
+# torch.save(state_dict, "OUTPUT/03c_ann_pytorch.tar")
 
-# save whole model
-torch.save(model, "OUTPUT/03c_ann_pytorch_model.tar")
+# # save whole model
+# torch.save(model, "OUTPUT/03c_ann_pytorch_model.tar")
+
+
+# ALTERNATIVE: https://pytorch.org/tutorials/beginner/saving_loading_models.html
+model_scripted = torch.jit.script(model) # Export to TorchScript
+model_scripted.save('03c_ann_pytorch_model.tar') # Save
+
 
 #%% Load Model
 
-# Load state dict from the disk 
-state_dict  = torch.load("OUTPUT/03c_ann_pytorch.tar")
+# # Load state dict from the disk 
+# state_dict  = torch.load("OUTPUT/03c_ann_pytorch.tar")
 
-# Create a new model and load the state
-model = NN(num_inputs=num_inputs, num_hidden=num_hidden, num_outputs=num_outputs)
-model.load_state_dict(state_dict)
+# # Create a new model and load the state
+# model = NN(num_inputs=num_inputs, num_hidden=num_hidden, num_outputs=num_outputs)
+# model.load_state_dict(state_dict)
+
+# ALTERNATIVE: https://pytorch.org/tutorials/beginner/saving_loading_models.html
+
+model = torch.jit.load('03c_ann_pytorch_model.tar')
+model.eval()
 
 #%% Get Evaluation Dataset
 test_dataset = CircleDataset(size=1e4)
