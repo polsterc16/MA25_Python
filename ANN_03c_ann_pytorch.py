@@ -164,6 +164,8 @@ state_dict = model.state_dict()
 model_scripted = torch.jit.script(model) # Export to TorchScript
 model_scripted.save('03c_ann_pytorch_model.tar') # Save
 
+# example_inputs = (torch.randn(2),)
+# onnx_program = torch.onnx.export(model,example_inputs, '03c_ann_pytorch_model.onnx')
 
 #%% Load Model
 

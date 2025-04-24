@@ -2,6 +2,9 @@
 *.keras
 *.p
 *.tar
+*.pt
+*.pth
+*.onnx
 
 dataset
 
