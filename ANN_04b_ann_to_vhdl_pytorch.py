@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 25 17:24:52 2025
+Created on Thu Apr 24 12:25:11 2025
 
 @author: Admin
 """
@@ -10,12 +10,20 @@ import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
-# import json
+
 from tqdm import tqdm
-# import cv2
-import tensorflow as tf
-import keras
+
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+
+import torch.utils.data as data
+
+# import onnx
+
+
 #%%
 path_out_dir = os.path.join("OUTPUT", "04_ann_to_vhdl")
 # Check whether the specified path exists or not
@@ -26,26 +34,46 @@ if not isExist:
     print("The new directory is created!"+"\n"+f"{path_out_dir}")
 
 del isExist
-#%% Get Data
 
-file_name = "circle_model_weights.p"
-path_dir_03 = os.path.join("OUTPUT", "03_ann")
 
-fpath_input = os.path.join(path_dir_03, "circle_model.keras")
 
-model = keras.models.load_model(fpath_input)
+#%% Load Model
+# onnx_model = onnx.load("03c_ann_pytorch_model.onnx")
 
-weights = model.get_weights()
+
+"""INFO: We expect to only use loaded models via torch.jit.load of a TorchScript model! """
+
+# https://pytorch.org/tutorials/beginner/saving_loading_models.html
+model = torch.jit.load('03c_ann_pytorch_model.pt')
+model.eval()
+
+
+assert hasattr(model, 'original_name')
+model_name = model.original_name
+
+
+# fetch children of the model
+chil_model = [ch for ch in model.children()]
+
+
+# CHECK: We expect this to only contain 1 "Sequential" module als child (see 03c_ann_pytorch)
+assert len(chil_model)==1 # must be only one element: a Sequential layer stack
+mod = chil_model[0]
+
+
+# CHECK: We expect it to be of the type "Sequential" (see 03c_ann_pytorch)
+assert hasattr(mod, 'original_name')
+assert mod.original_name == "Sequential"
+
+chil_seq = [ch for ch in mod.children()]
 
 #%%
 
-ann_conf = model.get_config()
+#%%
 
-n = ann_conf["name"]
-# must be a sequential ANN
-assert n[:10] == "sequential"
+ann_conf = [m for m in model.modules()]
 
-ann_layers = ann_conf["layers"]
+ann_layers = model.children()
 
 
 layers = {"num_layers":0}
