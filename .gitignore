@@ -1,6 +1,7 @@
 *.lnk
 *.keras
 *.p
+*.tar
 
 dataset
 

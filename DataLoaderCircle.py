@@ -13,21 +13,22 @@ Generate own Dataset for even distribution of points inside and
 """
 #%% IMPORTS
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 class DataSetUnitCircle2(Dataset):
     def __init__(self, size=1000):
-        self.data = torch.zeros((2,size), dtype=torch.float)
+        size = int(size)
+        self.data = torch.zeros((size,2), dtype=torch.float)
         self.labels = torch.zeros((size), dtype=torch.float)
         
-        args = torch.rand((2,size), dtype=torch.float)
-        args[0] *= 2
-        args[1] *= 2*torch.pi
+        args = torch.rand((size,2), dtype=torch.float)
+        args[:,0] *= 2            # rand radius 0 to 2
+        args[:,1] *= 2*torch.pi   # rand angle 0 to 2*pi
         
-        self.data[0] = args[0] * torch.cos( args[1] )
-        self.data[1] = args[0] * torch.sin( args[1] )
+        self.data[:,0] = args[:,0] * torch.cos( args[:,1] ) # x pos
+        self.data[:,1] = args[:,0] * torch.sin( args[:,1] ) # y pos
         
-        self.labels = (args[0]<1).int()
+        self.labels = (args[:,0]<1).float()
         
         
 
