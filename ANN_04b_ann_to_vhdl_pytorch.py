@@ -41,7 +41,9 @@ del isExist
 # onnx_model = onnx.load("03c_ann_pytorch_model.onnx")
 
 
-"""INFO: We expect to only use loaded models via torch.jit.load of a TorchScript model! """
+""" INFO: We expect to only use loaded models via torch.jit.load of a TorchScript model! 
+    Therefore, we will rely on the 'original_name' attribute of the model children,
+    to decide if they represent a valid network for this script."""
 
 # https://pytorch.org/tutorials/beginner/saving_loading_models.html
 model = torch.jit.load('03c_ann_pytorch_model.pt')
@@ -66,45 +68,87 @@ assert hasattr(mod, 'original_name')
 assert mod.original_name == "Sequential"
 
 chil_seq = [ch for ch in mod.children()]
+ann_layers = chil_seq
 
 #%%
+list_layers = ["Linear",]
+# list_activation = ["ReLU", "Hardsigmoid"]
 
-#%%
-
-ann_conf = [m for m in model.modules()]
-
-ann_layers = model.children()
+# dict_map_pytorch_layer = {}
 
 
-layers = {"num_layers":0}
-units_prev = 0
-layer_idx = 0
+dict_map_activation = {
+    "ReLU": "RELU",
+    "Hardsigmoid": "HARD_SIGMOID",
+}
+
+
+layers_1 = {"num_layers":0}
 
 for i,entry in enumerate(ann_layers):
-    print("-- Layer", i, entry["class_name"])
+    n = entry.original_name
+    print("-- Layer", i, f"[{n}]")
     
-    if entry["class_name"] == "InputLayer":
-        layer_conf = entry["config"]
-        layers["input_size"] = layer_conf["batch_input_shape"][1]
-        units_prev = layer_conf["batch_input_shape"][1]
+    if n in list_layers:
+        # if is DENSE / Fully Connected Layer
+        if n == "Linear":
+            # layer_conf = entry["config"]
+            layers_1[layers_1["num_layers"]] = {
+                "activation": "IDENTITY",
+                "pytorchIdx": i,
+            }
+            # dict_map_pytorch_layer[layers_1["num_layers"]] = i
+            
+            layers_1["num_layers"] += 1
+            pass
+        # else: if is conv layer, todo:future
+    elif n in dict_map_activation:
+        # if is Activation function (of prev layer)
         
-    elif entry["class_name"] == "Dense":
-        layer_conf = entry["config"]
-        layers[layer_idx] = {"units": layer_conf["units"],
-                     "units_prev": units_prev,
-                     "activation": layer_conf["activation"]}
-        layers["num_layers"] += 1
-        units_prev = layer_conf["units"]
-        layer_idx += 1
+        if n == "ReLU":
+            layers_1[layers_1["num_layers"]-1]["activation"] = dict_map_activation[n]
+            
+        elif n == "Hardsigmoid":
+            layers_1[layers_1["num_layers"]-1]["activation"] = dict_map_activation[n]
         
-        pass
     else:
         raise Exception("Unknown Type of Layer")
         pass
     
     pass
 
-del units_prev, layer_idx, n, entry
+
+#%%
+layers_2 = dict(layers_1)
+
+state_dict = model.state_dict()
+postfix_weight = ".{}.weight"
+postfix_bias   = ".{}.bias"
+
+# we must get the name of our dict entries
+list_keys = [k for k in state_dict]
+# so we fetch the first element and split with "." as separator
+prefix = list_keys[0].split(".")[0]
+
+for idx in range(layers_2["num_layers"]):
+    entry = layers_2[idx]
+    print(idx,entry)
+    
+    # the dict keys are a composite of prefix and postfix (formated with pytorchIdx)
+    key_weights = prefix + postfix_weight.format(entry["pytorchIdx"])
+    key_biases  = prefix + postfix_bias.format(entry["pytorchIdx"])
+    
+    entry["weights"]
+    # entry["units"]
+    
+    
+    
+
+
+
+#%%
+
+raise Exception()
 
 #%%
 
