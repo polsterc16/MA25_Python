@@ -145,6 +145,9 @@ state_dict = model.state_dict()
 # torch.save(object, filename). For the filename, any extension can be used
 torch.save(state_dict, "OUTPUT/03c_ann_pytorch.tar")
 
+# save whole model
+torch.save(model, "OUTPUT/03c_ann_pytorch_model.tar")
+
 #%% Load Model
 
 # Load state dict from the disk 
