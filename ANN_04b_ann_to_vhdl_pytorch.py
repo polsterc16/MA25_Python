@@ -135,10 +135,10 @@ for idx in range(layers["num_layers"]):
     # the dict keys are a composite of prefix and postfix (formated with pytorchIdx)
     pytorchIdx = entry["pytorchIdx"]
     key_weights = prefix + postfix_weight.format(pytorchIdx)
-    key_biases  = prefix + postfix_bias.format(pytorchIdx)
+    key_bias    = prefix + postfix_bias.format(pytorchIdx)
     
     entry["weights"] = state_dict[key_weights].numpy()
-    entry["biases"] = state_dict[key_biases].numpy()
+    entry["bias"]    = state_dict[key_bias].numpy()
     # entry["units"]
     
     entry["units"], entry["units_prev"] = entry["weights"].shape
@@ -175,12 +175,13 @@ for i in range(layers["num_layers"]):
     weights = layer["weights"]
     w = weights * FP_ONE
     w = np.int64(w)
-    # raise Exception()
     # w = np.transpose(w)
     
-    b = weights[2*i + 1] * FP_ONE
+    bias = layer["bias"]
+    b = bias * FP_ONE
     b = np.int64(b)
     
+    # raise Exception()
     
     txt_component =  f"U_{i} : c_004_layer_01" + "\n{};\n"
     
@@ -414,7 +415,7 @@ with open(fPathIn) as f:
     fileStr = f.read()
     pass
 
-EntityName = "c_x_ANN_01"
+EntityName = "c_x_ANN_02"
 fileNameOut = f"{EntityName}.vhd"
 fPathOut = os.path.join(path_out_dir, fileNameOut)
 
