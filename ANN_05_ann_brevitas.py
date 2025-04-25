@@ -5,18 +5,23 @@ Created on Wed Apr 23 11:44:53 2025
 @author: Admin
 
 https://xilinx.github.io/brevitas/getting_started.html
+https://docs.zama.ai/concrete-ml/deep-learning/fhe_friendly_models
 """
 #%% IMPORTS
 
+import torch
 from torch import nn
 from torch.nn import Module
 import torch.nn.functional as F
 
+import torch.utils.data as data
+
+
 import brevitas.nn as qnn
+from brevitas.quant import Int8ActPerTensorFixedPoint, Int8WeightPerTensorFixedPoint, Int8Bias
 
 
 from tqdm import tqdm
-
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -29,10 +34,10 @@ sns.set()
 
 # https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
 
-class NN(nn.Module): # inherit from nn.Module
+class QuantNet(Module): # inherit from nn.Module
 
     def __init__(self, num_inputs, num_hidden, num_outputs):
-        super(NN, self).__init__()
+        super(QuantNet, self).__init__()
         # Initialize the modules we need to build the network
         # self.linear1 = nn.Linear(num_inputs, num_hidden)
         # self.linear2 = nn.Linear(num_hidden, num_outputs)
@@ -41,16 +46,22 @@ class NN(nn.Module): # inherit from nn.Module
         # # self.act_hsigm = F.hardsigmoid
         # self.act_hsigm = nn.Hardsigmoid()
         
+        self.quant_inp = qnn.QuantIdentity(bit_width=16)
+        
         self.linear_stack = nn.Sequential(
-            nn.Linear(num_inputs, num_hidden),
-            nn.ReLU(),
-            nn.Linear(num_hidden, num_outputs),
-            nn.Hardsigmoid(),
+            # nn.Linear(num_inputs, num_hidden),
+            # nn.ReLU(),
+            # nn.Linear(num_hidden, num_outputs),
+            # nn.Hardsigmoid(),
+            qnn.QuantLinear(num_inputs, num_hidden, weight_bit_width=16),
+            qnn.QuantReLU(bit_width=16),
+            qnn.QuantLinear(num_hidden, num_outputs, weight_bit_width=16),
+            qnn.QuantReLU(bit_width=16),
         )
         pass
     
     def forward(self, x):
-        # Perform the calculation of the model to determine the prediction
+        x = self.quant_inp(x)
         x = self.linear_stack(x)
         return x
 
@@ -73,7 +84,7 @@ num_epochs = 5
 
 #%% Initialize Network
 
-model = NN(num_inputs=num_inputs, num_hidden=num_hidden, num_outputs=num_outputs).to(device)
+model = QuantNet(num_inputs=num_inputs, num_hidden=num_hidden, num_outputs=num_outputs).to(device)
 # Printing a module shows all its submodules
 print(model)
 
