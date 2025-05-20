@@ -9,13 +9,14 @@ import os
 import datetime
 
 import numpy as np
-import matplotlib.pyplot as plt
-import pickle
-# import json
-from tqdm import tqdm
-# import cv2
-import tensorflow as tf
+
 import keras
+
+#%%
+
+SUMMARY_NETWORK = True
+SUMMARY_EDITS = True
+
 #%%
 path_out_dir = os.path.join("OUTPUT", "04_ann_to_vhdl")
 # Check whether the specified path exists or not
@@ -26,9 +27,9 @@ if not isExist:
     print("The new directory is created!"+"\n"+f"{path_out_dir}")
 
 del isExist
-#%% Get Data
 
-file_name = "circle_model_weights.p"
+#%% Load Model
+
 path_dir_03 = os.path.join("OUTPUT", "03_ann")
 
 fpath_input = os.path.join(path_dir_03, "circle_model.keras")
@@ -48,12 +49,12 @@ assert n[:10] == "sequential"
 ann_layers = ann_conf["layers"]
 
 
-layers = {"num_layers":0}
+layers = {"num_layers":0, "LAYER":{}}
 units_prev = 0
 layer_idx = 0
 
 for i,entry in enumerate(ann_layers):
-    print("-- Layer", i, entry["class_name"])
+    # print("-- Layer", i, entry["class_name"])
     
     if entry["class_name"] == "InputLayer":
         layer_conf = entry["config"]
@@ -62,9 +63,9 @@ for i,entry in enumerate(ann_layers):
         
     elif entry["class_name"] == "Dense":
         layer_conf = entry["config"]
-        layers[layer_idx] = {"units": layer_conf["units"],
-                     "units_prev": units_prev,
-                     "activation": layer_conf["activation"]}
+        layers["LAYER"][layer_idx] = {"units": layer_conf["units"],
+                                      "units_prev": units_prev,
+                                      "activation": layer_conf["activation"]}
         layers["num_layers"] += 1
         units_prev = layer_conf["units"]
         layer_idx += 1
@@ -78,10 +79,26 @@ for i,entry in enumerate(ann_layers):
 
 del units_prev, layer_idx, n, entry
 
-#%%
+#%% SUMMARY
+
+if SUMMARY_NETWORK:
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Summary of Network:")
+    print("\t","------------------------------")
+    print("Number Of Layers:",layers["num_layers"])
+    print("")
+    for k in layers["LAYER"]:
+        entry = layers["LAYER"][k]
+        print("-- Layer",k)
+        print("\t", f'Units: {entry["units"]}, Units_Prev: {entry["units_prev"]}, Activation: {entry["activation"]}')
+        
+    print("\t","______________________________")
+    print("\t","______________________________")
+    print("\n")
 
 
-#%%
+#%% CONVERSION
 
 DATA_WIDTH = 16
 DATA_Q = 8
@@ -96,7 +113,7 @@ list_port_inout = []
 
 for i in range(layers["num_layers"]):
 
-    layer = layers[i]
+    layer = layers["LAYER"][i]
     
     w = weights[2*i] * FP_ONE
     w = np.int64(w)
@@ -309,16 +326,35 @@ del list_port_inout
 
 
 
+
 inst_port_maps = "\n".join(inst_port_maps)
-print(inst_port_maps)
-
-
-
-#%%
 
 
 
 
+#%% SUMMARY
+
+if SUMMARY_EDITS:
+    print("\t","------------------------------")
+    print("\t","--","Edit in Port declarations:")
+    print("\t","------------------------------")
+    print(txt_port_layer_inout)
+    
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Edit in Signal declarations:")
+    print("\t","------------------------------")
+    print(txt_signals)
+    
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Edit in Instance port mappings:")
+    print("\t","------------------------------")
+    print(inst_port_maps)
+    
+    print("\t","______________________________")
+    print("\t","______________________________")
+    print("\n")
 
 #%%
 
@@ -348,26 +384,16 @@ fileStr = fileStr.replace("{$NAME_ENTITY}", EntityName)
 tnow = datetime.datetime.now()
 fileStr = fileStr.replace("{$DATE_TIME}", str(tnow))
 
-
-
 fileStr = fileStr.replace("{$SIGNAL_DECLARATION}", txt_signals)
-
-
 
 fileStr = fileStr.replace("{$INSTANCE_PORT_MAPPINGS}", inst_port_maps)
 
-
-
-
-
 fileStr = fileStr.replace("{$PORT_LAYER_IN_OUT}", txt_port_layer_inout)
-
-
-
 
 with open(fPathOut, mode="w") as f:
     f.write(fileStr)
 
+print(f"File '{fileNameOut}' created/overwritten!")
 #%%
 
 

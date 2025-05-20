@@ -9,20 +9,13 @@ import os
 import datetime
 
 import numpy as np
-import matplotlib.pyplot as plt
-
-from tqdm import tqdm
-
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 
-import torch.utils.data as data
+#%%
 
-# import onnx
-
+SUMMARY_NETWORK = True
+SUMMARY_EDITS = True
 
 #%%
 path_out_dir = os.path.join("OUTPUT", "04_ann_to_vhdl")
@@ -35,11 +28,7 @@ if not isExist:
 
 del isExist
 
-
-
 #%% Load Model
-# onnx_model = onnx.load("03c_ann_pytorch_model.onnx")
-
 
 """ INFO: We expect to only use loaded models via torch.jit.load of a TorchScript model! 
     Therefore, we will rely on the 'original_name' attribute of the model children,
@@ -83,17 +72,17 @@ dict_map_activation = {
 }
 
 
-layers = {"num_layers":0}
+layers = {"num_layers":0, "LAYER":{}}
 
 for i,entry in enumerate(ann_layers):
     n = entry.original_name
-    print("-- Layer", i, f"[{n}]")
+    # print("-- Layer", i, f"[{n}]")
     
     if n in list_layers:
         # if is DENSE / Fully Connected Layer
         if n == "Linear":
             # layer_conf = entry["config"]
-            layers[layers["num_layers"]] = {
+            layers["LAYER"][layers["num_layers"]] = {
                 "activation": "IDENTITY",
                 "pytorchIdx": i,
             }
@@ -106,10 +95,10 @@ for i,entry in enumerate(ann_layers):
         # if is Activation function (of prev layer)
         
         if n == "ReLU":
-            layers[layers["num_layers"]-1]["activation"] = dict_map_activation[n]
+            layers["LAYER"][layers["num_layers"]-1]["activation"] = dict_map_activation[n]
             
         elif n == "Hardsigmoid":
-            layers[layers["num_layers"]-1]["activation"] = dict_map_activation[n]
+            layers["LAYER"][layers["num_layers"]-1]["activation"] = dict_map_activation[n]
         
     else:
         raise Exception("Unknown Type of Layer")
@@ -117,7 +106,7 @@ for i,entry in enumerate(ann_layers):
     
     pass
 
-###############################################################################
+#%% Fetch Weights an Biases
 
 state_dict = model.state_dict()
 postfix_weight = ".{}.weight"
@@ -129,8 +118,8 @@ list_keys = [k for k in state_dict]
 prefix = list_keys[0].split(".")[0]
 
 for idx in range(layers["num_layers"]):
-    entry = layers[idx]
-    print(idx,entry)
+    entry = layers["LAYER"][idx]
+    # print(idx,entry)
     
     # the dict keys are a composite of prefix and postfix (formated with pytorchIdx)
     pytorchIdx = entry["pytorchIdx"]
@@ -146,16 +135,26 @@ for idx in range(layers["num_layers"]):
     
     
 
+#%% SUMMARY
+
+if SUMMARY_NETWORK:
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Summary of Network:")
+    print("\t","------------------------------")
+    print("Number Of Layers:",layers["num_layers"])
+    print("")
+    for k in layers["LAYER"]:
+        entry = layers["LAYER"][k]
+        print("-- Layer",k)
+        print("\t", f'Units: {entry["units"]}, Units_Prev: {entry["units_prev"]}, Activation: {entry["activation"]}')
+        
+    print("\t","______________________________")
+    print("\t","______________________________")
+    print("\n")
 
 
-#%%
-
-raise Exception()
-
-#%%
-
-
-#%%
+#%% CONVERSION
 
 DATA_WIDTH = 16
 DATA_Q = 8
@@ -170,7 +169,7 @@ list_port_inout = []
 
 for i in range(layers["num_layers"]):
 
-    layer = layers[i]
+    layer = layers["LAYER"][i]
     
     weights = layer["weights"]
     w = weights * FP_ONE
@@ -181,7 +180,6 @@ for i in range(layers["num_layers"]):
     b = bias * FP_ONE
     b = np.int64(b)
     
-    # raise Exception()
     
     txt_component =  f"U_{i} : c_004_layer_01" + "\n{};\n"
     
@@ -386,16 +384,35 @@ del list_port_inout
 
 
 
+
 inst_port_maps = "\n".join(inst_port_maps)
-print(inst_port_maps)
-
-
-
-#%%
 
 
 
 
+#%% SUMMARY
+
+if SUMMARY_EDITS:
+    print("\t","------------------------------")
+    print("\t","--","Edit in Port declarations:")
+    print("\t","------------------------------")
+    print(txt_port_layer_inout)
+    
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Edit in Signal declarations:")
+    print("\t","------------------------------")
+    print(txt_signals)
+    
+    print("\n")
+    print("\t","------------------------------")
+    print("\t","--","Edit in Instance port mappings:")
+    print("\t","------------------------------")
+    print(inst_port_maps)
+    
+    print("\t","______________________________")
+    print("\t","______________________________")
+    print("\n")
 
 #%%
 
@@ -425,26 +442,16 @@ fileStr = fileStr.replace("{$NAME_ENTITY}", EntityName)
 tnow = datetime.datetime.now()
 fileStr = fileStr.replace("{$DATE_TIME}", str(tnow))
 
-
-
 fileStr = fileStr.replace("{$SIGNAL_DECLARATION}", txt_signals)
-
-
 
 fileStr = fileStr.replace("{$INSTANCE_PORT_MAPPINGS}", inst_port_maps)
 
-
-
-
-
 fileStr = fileStr.replace("{$PORT_LAYER_IN_OUT}", txt_port_layer_inout)
-
-
-
 
 with open(fPathOut, mode="w") as f:
     f.write(fileStr)
 
+print(f"File '{fileNameOut}' created/overwritten!")
 #%%
 
 
