@@ -178,7 +178,7 @@ model_scripted.save('03c_ann_pytorch_model.pt') # Save
 
 # ALTERNATIVE: https://pytorch.org/tutorials/beginner/saving_loading_models.html
 
-model = torch.jit.load('03c_ann_pytorch_model.tar')
+model = torch.jit.load('03c_ann_pytorch_model.pt')
 model.eval()
 
 #%% Get Evaluation Dataset
@@ -254,15 +254,15 @@ def visualize_classification_2(model, data, label):
     data_1 = data[label == 1]
     
     # fig = plt.figure(figsize=(4,4))
-    fig, ax = plt.subplots(figsize=(4,4))
+    fig, ax = plt.subplots(figsize=(4.5,4.5))
     ax.scatter(
         data_0[:,0], data_0[:,1], marker="^", linewidths=0.5, facecolors='none', edgecolors="k", label="Outside")
     ax.scatter(
         data_1[:,0], data_1[:,1], marker="o", linewidths=0.5, facecolors='none', edgecolors="k", label="Inside")
     
     ax.set_title("Unit Circle Evaluation")
-    ax.set_ylabel(r"$y$")
-    ax.set_xlabel(r"$x$")
+    ax.set_ylabel(r"$x_2$")
+    ax.set_xlabel(r"$x_1$")
     # plt.title("Dataset samples")
     # plt.ylabel(r"$y$")
     # plt.xlabel(r"$x$")
@@ -296,11 +296,14 @@ def visualize_classification_2(model, data, label):
     
     ax.imshow(output_image, origin='lower', extent=(-2, 2, -2, 2))
     
+    patch_circle = plt.Circle((0, 0), 1, color=None, ls="--", fill=False, alpha=0.5)
+    ax.add_patch(patch_circle)
     
-    ax.set_xlim([-2, 2])
-    ax.set_ylim([-2, 2])
+    ax.set_xlim([-1.5, 1.5])
+    ax.set_ylim([-1.5, 1.5])
     # plt.xlim([-2, 2])
     # plt.ylim([-2, 2])
+    ax.set_aspect( 1 )
     
     # fig.tight_layout()
     return fig,ax
