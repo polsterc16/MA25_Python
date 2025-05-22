@@ -101,8 +101,8 @@ if SUMMARY_NETWORK:
 #%% CONVERSION
 
 DATA_WIDTH = 16
-DATA_Q = 8
-FP_ONE = 2**DATA_Q
+DATA_QF = 8
+FP_ONE = 2**DATA_QF
 
 inst_port_maps = [""]*layers["num_layers"]
 
@@ -128,7 +128,6 @@ for i in range(layers["num_layers"]):
     
     txt_generic = "generic map (\n{}\n)"
     txt_port = "port map (\n{}\n)"
-    
     
     
     
@@ -190,12 +189,6 @@ for i in range(layers["num_layers"]):
     txt_generic = txt_generic.format(",\n".join(list_generics))
     del list_generics, txt_weights, list_w2, txt_w1, txt_w2, w, w1, w2
     del txt_bias, txt_b1, b1, b, elem
-    
-    # print("\n--",i)
-    # print(txt_generic)
-    
-    
-    
     
     
     
