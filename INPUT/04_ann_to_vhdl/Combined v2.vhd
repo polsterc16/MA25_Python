@@ -6,6 +6,8 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.all;
 USE ieee.numeric_std.all;
+library proj_master_2025_lib;
+use proj_master_2025_lib.p_002_generic_01.all;
 
 entity {$NAME_ENTITY} is
    port( 
